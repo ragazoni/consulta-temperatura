@@ -1,9 +1,21 @@
-FROM golang:1.22-alpine AS builder
+# Etapa de construção
+FROM golang:1.22 AS builder
+
+# Instala ca-certificates
+RUN apt-get update && apt-get install -y ca-certificates && update-ca-certificates
+
+
 WORKDIR /app
 COPY . .
-RUN go build -o main .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o main
 
-FROM alpine
+# Etapa final
+FROM scratch
 WORKDIR /app
 COPY --from=builder /app/main .
-CMD ["./main"]
+
+# Expor a porta 8080
+EXPOSE 8080
+
+# Comando de entrada
+ENTRYPOINT ["./main"]

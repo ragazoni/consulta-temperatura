@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"regexp"
 
 	"github.com/ragazoni/consulta-temperatura/api/service"
 )
@@ -11,31 +12,38 @@ import (
 func GetTemperatureHandler(w http.ResponseWriter, r *http.Request) {
 	zipcode := r.URL.Query().Get("zipcode")
 
-	if len(zipcode) != 8 {
-		http.Error(w, "invalid zipcode", http.StatusUnprocessableEntity)
+	if !isValidCEP(zipcode) {
+		http.Error(w, `{"message": "invalid zipcode"}`, http.StatusUnprocessableEntity)
 		return
 	}
 
 	location, err := service.GetLocationByZipcode(zipcode)
+	log.Printf("location: %+v", location)
 	if err != nil {
-		log.Printf("Error getting location: %+v", err)
-		http.Error(w, "can not find zipcode", http.StatusNotFound)
+		http.Error(w, `{"message": "can not find zipcode"}`, http.StatusNotFound)
 		return
 	}
 
-	temperature, err := service.GetTemperature(location)
+	tempC, err := service.GetTemperature(location)
+	log.Printf("tempC: %+v", tempC)
 	if err != nil {
-		log.Printf("error getting temperature: %+v", err)
-		http.Error(w, "failed to get temperature", http.StatusInternalServerError)
+		http.Error(w, `{"message": "unable to fetch weather"}`, http.StatusInternalServerError)
 		return
 	}
 
-	resp := map[string]float64{
-		"temp_C": temperature.Celsius,
-		"temp_F": temperature.Fahrenheit,
-		"temp_K": temperature.Kelvin,
+	tempF := tempC*1.8 + 32
+	tempK := tempC + 273
+
+	response := map[string]float64{
+		"temp_C": tempC,
+		"temp_F": tempF,
+		"temp_K": tempK,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	json.NewEncoder(w).Encode(response)
+}
+func isValidCEP(zipcode string) bool {
+	match, _ := regexp.MatchString(`^\d{8}$`, zipcode)
+	return match
 }

@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	http.HandleFunc("/", handlers.GetTemperatureHandler)
+	http.HandleFunc("/weather", handlers.GetTemperatureHandler)
 
 	port := os.Getenv("PORT")
 	if port == "" {

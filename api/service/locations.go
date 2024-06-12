@@ -1,8 +1,10 @@
 package service
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 )
 
@@ -11,9 +13,18 @@ type Location struct {
 }
 
 func GetLocationByZipcode(zipcode string) (string, error) {
-	url := fmt.Sprintf("https://viacep.com.br/ws/%s/json/", zipcode)
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+	}
 
-	resp, err := http.Get(url)
+	url := fmt.Sprintf("https://viacep.com.br/ws/%s/json/", zipcode)
+	log.Printf("URL da solicitação: %s", url)
+
+	resp, err := client.Get(url)
 	if err != nil {
 		return "", err
 	}
@@ -24,7 +35,7 @@ func GetLocationByZipcode(zipcode string) (string, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&location); err != nil {
 		return "", err
 	}
-
+	log.Printf("location.City: %s", location.City)
 	return location.City, nil
 
 }
